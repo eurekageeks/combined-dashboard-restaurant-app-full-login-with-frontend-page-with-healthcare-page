@@ -35,24 +35,23 @@ export default function DashboardCustomer() {
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="h-16 flex items-center px-6 border-b">
           <img
-  src={qrLogo}   // or src="/qr.png" if using public folder
-  alt="QR Logo"
-  style={{ width: "50px", height: "50px" }} // small logo
-/>
+            src={qrLogo}
+            alt="QR Logo"
+            style={{ width: "50px", height: "50px" }}
+          />
           <span className="ml-2 text-lg font-bold">GWT QR</span>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          
-         
           <SidebarItem icon={Users} label="Customer Profile" to="/dashboard/customer" />
-           <SidebarItem icon={Users} label="Orders" to="/dashboard/customer" />
+          <SidebarItem icon={Users} label="Orders" to="/dashboard/customer" />
         </nav>
 
+        {/* SIDEBAR LOGOUT */}
         <div className="p-4 border-t">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg"
+            className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-2 rounded-lg"
           >
             <LogOut className="w-4 h-4" />
             Logout
@@ -80,12 +79,20 @@ export default function DashboardCustomer() {
               ) : (
                 <>
                   <p className="font-medium">{user.email}</p>
-                  <p className="text-gray-500 text-xs">
-                   
-                  </p>
+                  <p className="text-gray-500 text-xs"></p>
                 </>
               )}
             </div>
+
+            {/* HEADER LOGOUT (NEW) */}
+            <button
+              onClick={handleLogout}
+              className="ml-3 flex items-center gap-2 !bg-red-600 !text-white px-3 py-2 rounded-lg shadow-md"
+
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
           </div>
         </header>
 

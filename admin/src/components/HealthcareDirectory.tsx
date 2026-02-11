@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import { useNavigate } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
 
 /* ---------------- CATEGORIES ---------------- */
 const categories = [
@@ -108,10 +111,38 @@ export default function HealthcareDirectory() {
   const [activeCategory, setActiveCategory] = useState("All");
 
   /* FILTERS */
- const [showOpen, setShowOpen] = useState(true);
+  const [showOpen, setShowOpen] = useState(true);
   const [homeOnly, setHomeOnly] = useState(false);
 
   const allBusinesses = useMemo(() => createBusinesses(), []);
+ const navigate = useNavigate();
+const [showLoginPopup, setShowLoginPopup] = useState(false);
+const [mode, setMode] = useState<"login" | "signup">("login");
+const [confirmPassword, setConfirmPassword] = useState("");
+const [mobile, setMobile] = useState("");
+
+
+/* ✅ NEW STATES FOR LOGIN */
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+let user: any = null;
+let signIn: any = null;
+let signUp: any = null;
+let logout: any = null;
+
+try {
+  const auth = useAuth();
+  user = auth?.user ?? null;
+  signIn = auth?.signIn ?? null;
+  signUp = auth?.signUp ?? null;   // ✅
+  logout = auth?.logout ?? null;
+} catch {
+  user = null;
+  signIn = null;
+  signUp = null;
+  logout = null;
+}
 
   /* SCROLL REFS */
   const scrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -144,6 +175,59 @@ export default function HealthcareDirectory() {
       return matchCategory && matchSearch && matchOpen && matchHome;
     });
   }, [activeCategory, search, showOpen, homeOnly, allBusinesses]);
+ 
+  /* ✅ LOGIN AS CUSTOMER */
+  const handleCustomerLogin = async () => {
+    setError("");
+    const result = await signIn(email, password, "customer");
+
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+
+    setShowLoginPopup(false);
+  };
+const handleCustomerSignup = async () => {
+  setError("");
+
+  if (!email || !password || !confirmPassword || !mobile) {
+    setError("All fields are required");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setError("Passwords do not match");
+    return;
+  }
+
+  if (!signUp) {
+    setError("Signup service unavailable");
+    return;
+  }
+
+  const result = await signUp({
+    role: "customer",
+    email,
+    mobile,
+    password,
+  });
+
+  if (result?.error) {
+    setError(result.error);
+    return;
+  }
+
+  // Switch to login mode
+  setMode("login");
+
+  // Clear fields
+  setPassword("");
+  setConfirmPassword("");
+  setMobile("");
+
+  setError("Account created successfully. Please login.");
+};
 
 
   return (
@@ -164,21 +248,20 @@ export default function HealthcareDirectory() {
         .scroll-row::-webkit-scrollbar { display: none; }
 
         .health-card {
-  min-width: 420px;   /* wider for side layout */
-  background: #fff;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 6px 20px rgba(0,0,0,.08);
-  flex-shrink: 0;
-  display: flex;      /* IMPORTANT */
-}
+          min-width: 420px;
+          background: #fff;
+          border-radius: 14px;
+          overflow: hidden;
+          box-shadow: 0 6px 20px rgba(0,0,0,.08);
+          flex-shrink: 0;
+          display: flex;
+        }
 
-.health-card img {
-  width: 160px;       /* fixed image width */
-  height: auto;
-  object-fit: cover;
-}
-
+        .health-card img {
+          width: 160px;
+          height: auto;
+          object-fit: cover;
+        }
 
         .badge-home {
           position: absolute;
@@ -193,20 +276,69 @@ export default function HealthcareDirectory() {
         }
 
         .cat-btn { white-space: nowrap; }
-      `}</style>
-     {/* ================= HEADER ================= */}
+/* LOGIN POPUP NAVY BLUE THEME */
+.navy-modal .modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.navy-modal .modal-header {
+  background: linear-gradient(45deg, #0b3d91, #0f52ba);
+  color: white;
+  border-bottom: none;
+}
+
+.navy-modal .modal-body {
+  background: #eef2ff;
+}
+
+.navy-btn {
+  background: linear-gradient(45deg, #0b3d91, #0f52ba);
+  border: none;
+  color: white;
+  font-weight: 600;
+}
+
+.navy-btn:hover {
+  opacity: 0.9;
+  color: white;
+}
+
+`}</style>
+      {/* ================= HEADER ================= */}
       <div className="border-bottom bg-white">
         <div className="container d-flex justify-content-between align-items-center py-3">
           <div className="d-flex align-items-center gap-2">
-            <img
-              src="/src/assets/qr.png"
-              alt="logo"
-              width="28"
-            />
+            <img src="/src/assets/qr.png" alt="logo" width="28" />
             <h5 className="mb-0 fw-bold text-primary">GWT-QR</h5>
           </div>
 
-          <button className="btn btn-outline-primary px-4">Login</button>
+         {user ? (
+  <div className="d-flex align-items-center gap-3">
+    <span className="fw-semibold text-primary">
+      Hi, {user.name || user.email}
+    </span>
+
+    <button
+      className="btn btn-danger"
+      onClick={() => logout && logout()}
+    >
+      Logout
+    </button>
+  </div>
+) : (
+  <button
+  className="btn px-4 text-white"
+  style={{ backgroundColor: "#0b3d91", borderColor: "#0b3d91" }}
+  onClick={() => navigate("/login")}
+>
+  Login
+</button>
+
+)}
+
+
+
         </div>
 
         <div className="container py-2">
@@ -216,67 +348,74 @@ export default function HealthcareDirectory() {
         </div>
       </div>
       {/* ================= END HEADER ================= */}
+
       {/* ================= TOP FILTER BAR ================= */}
-<div className="bg-white border-bottom">
-  <div className="container py-3">
+      <div className="bg-white border-bottom">
+        <div className="container py-3">
+          
 
-    {/* Title */}
-    <h2 className="fw-bold mb-3">Local Clinics</h2>
+          <div className="d-flex flex-wrap align-items-center gap-2">
+            <div className="input-group" style={{ maxWidth: 320 }}>
+              <span className="input-group-text">
+                <i className="bi bi-search"></i>
+              </span>
+              <input
+                className="form-control"
+                placeholder="Search local clinics near you"
+              />
+            </div>
 
-    {/* Filters Row */}
-    <div className="d-flex flex-wrap align-items-center gap-2">
+            <button className="btn btn-light border">
+              Location <i className="bi bi-chevron-down ms-1"></i>
+            </button>
 
-      {/* Search */}
-      <div className="input-group" style={{ maxWidth: 320 }}>
-        <span className="input-group-text">
-          <i className="bi bi-search"></i>
-        </span>
-        <input
-          className="form-control"
-          placeholder="Search local clinics near you"
-        />
+            <button className="btn btn-light border">
+              Rating <i className="bi bi-chevron-down ms-1"></i>
+            </button>
+
+            <button className="btn btn-light border">
+              <i className="bi bi-sliders me-1"></i>
+              Filters
+            </button>
+
+            
+            
+             {/* OPEN TOGGLE */}
+            <div className="form-check form-switch">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                checked={showOpen}
+                onChange={(e) => setShowOpen(e.target.checked)}
+                id="openNowTop"
+              />
+              <label className="form-check-label" htmlFor="openNowTop">
+                Open Now
+              </label>
+            </div>
+
+            {/* HOME VISIT TOGGLE */}
+            <div className="form-check form-switch">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                checked={homeOnly}
+                onChange={(e) => setHomeOnly(e.target.checked)}
+                id="homeVisitTop"
+              />
+              <label className="form-check-label" htmlFor="homeVisitTop">
+                Home Visit
+              </label>
+            </div>
+            <button className="btn btn-outline-primary ms-auto">
+              Clear All
+            </button>
+          </div>
+        </div>
       </div>
-
-      {/* Location */}
-      <button className="btn btn-light border">
-        Location <i className="bi bi-chevron-down ms-1"></i>
-      </button>
-
-      {/* Rating */}
-      <button className="btn btn-light border">
-        Rating <i className="bi bi-chevron-down ms-1"></i>
-      </button>
-
-      {/* Filters */}
-      <button className="btn btn-light border">
-        <i className="bi bi-sliders me-1"></i>
-        Filters
-      </button>
-
-      {/* Open Now */}
-      <div className="form-check form-switch ms-2">
-        <input
-          className="form-check-input"
-          type="checkbox"
-          id="openNowTop"
-        />
-        <label className="form-check-label" htmlFor="openNowTop">
-          Open Now
-        </label>
-      </div>
-
-      {/* Clear */}
-      <button className="btn btn-outline-primary ms-auto">
-        Clear All
-      </button>
-    </div>
-  </div>
-</div>
-{/* ================= END TOP FILTER BAR ================= */}
+      {/* ================= END TOP FILTER BAR ================= */}
 
       <div className="container my-4">
-        {/* SEARCH */}
-        
         {/* CATEGORY BUTTONS */}
         <div className="d-flex gap-2 overflow-auto mb-3">
           <button
@@ -289,8 +428,6 @@ export default function HealthcareDirectory() {
           </button>
 
           {categories.map((c) => (
-
-
             <button
               key={c.name}
               className={`btn cat-btn ${
@@ -305,36 +442,7 @@ export default function HealthcareDirectory() {
           ))}
         </div>
 
-{/* FILTER SWITCHES */}
-<div className="mb-3 d-flex gap-3 align-items-center">
-  {/* Open/Closed Switch */}
-  <div className="form-check form-switch">
-    <input
-      className="form-check-input"
-      type="checkbox"
-      checked={showOpen}
-      onChange={(e) => setShowOpen(e.target.checked)}
-      id="openCheck"
-    />
-    <label className="form-check-label" htmlFor="openCheck">
-      {showOpen ? "Open" : "Closed"}
-    </label>
-  </div>
-
-  {/* Home Visit Switch */}
-  <div className="form-check form-switch">
-    <input
-      className="form-check-input"
-      type="checkbox"
-      checked={homeOnly}
-      onChange={(e) => setHomeOnly(e.target.checked)}
-      id="homeVisitCheck"
-    />
-    <label className="form-check-label" htmlFor="homeVisitCheck">
-      Home Visit
-    </label>
-  </div>
-</div>
+        
 
         {/* ROWS */}
         {categories
@@ -370,83 +478,237 @@ export default function HealthcareDirectory() {
                     </button>
                   </div>
                 </div>
-
-                {/* CARDS */}
-                <div
+{/* CARDS */}
+<div
   className="scroll-row"
-  ref={(el) => {
+  ref={(el: HTMLDivElement | null) => {
     scrollRefs.current[cat.name] = el;
   }}
 >
+ {businesses.map((b) => (
+  <div
+    key={b.id}
+    className="health-card position-relative flex-column"
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate(`/hospital/${b.id}`)}
+  >
 
-                  {businesses.map((b) => (
-                    <div key={b.id} className="health-card position-relative">
-  {b.homeVisit && (
-    <div className="badge-home">
-      <i className="bi bi-house-door me-1"></i>
-      Home Visit
+      {b.homeVisit && (
+        <div className="badge-home">
+          <i className="bi bi-house-door me-1"></i>
+          Home Visit
+        </div>
+      )}
+
+      {/* TOP SECTION */}
+      <div className="d-flex">
+        {/* IMAGE */}
+        <img
+          src={`${b.img}?auto=format&fit=crop&w=800&q=80`}
+          alt={b.name}
+        />
+
+        {/* DETAILS */}
+        <div className="p-3 flex-grow-1">
+          <h5 className="fw-bold mb-1">{b.name}</h5>
+
+          <div className="d-flex align-items-center gap-2 mb-1">
+            <span className="text-warning">⭐⭐⭐⭐⭐</span>
+            <span className="fw-semibold">{b.rating}</span>
+            <small className="text-muted">(105 reviews)</small>
+          </div>
+
+          <div className="text-muted mb-1">
+            <i className="bi bi-geo-alt-fill me-1"></i>
+            123 Main Street, Delhi
+          </div>
+
+          <div className={`${b.isOpen ? "text-success" : "text-danger"}`}>
+            <i className="bi bi-check-circle-fill me-1"></i>
+            {b.isOpen ? "Open Now · Closes at 8:00 PM" : "Closed"}
+          </div>
+        </div>
+      </div>
+
+      {/* BOTTOM SECTION */}
+      <div className="border-top p-3 d-flex align-items-center justify-content-between">
+        <div className="d-flex flex-wrap gap-2">
+          <span className="badge bg-light text-primary border">
+            General Consultation
+          </span>
+          <span className="badge bg-light text-dark border">₹500</span>
+          <span className="badge bg-light text-primary border">
+            Blood Tests
+          </span>
+          <span className="badge bg-light text-primary border">
+            Vaccinations
+          </span>
+        </div>
+
+        <button
+  className="btn btn-light border d-flex align-items-center gap-2"
+  onClick={(e) => {
+    e.stopPropagation();   // ✅ prevents redirect
+    setShowLoginPopup(true);
+  }}
+>
+
+  <i className="bi bi-telephone"></i>
+  Call
+</button>
+
+      </div>
     </div>
-  )}
-
-  <img
-    src={`${b.img}?auto=format&fit=crop&w=800&q=80`}
-    alt={b.name}
-  />
-
-  {/* RIGHT SIDE */}
-  <div className="p-3 d-flex flex-column flex-grow-1">
-  {/* NAME */}
-  <h5 className="fw-bold mb-1">{b.name}</h5>
-
-  {/* RATING */}
-  <div className="d-flex align-items-center gap-2 mb-1">
-    <span className="text-warning">⭐⭐⭐⭐⭐</span>
-    <span className="fw-semibold">{b.rating}</span>
-    <small className="text-muted">(105 reviews)</small>
-  </div>
-
-  {/* ADDRESS */}
-  <div className="text-muted mb-1">
-    <i className="bi bi-geo-alt-fill me-1"></i>
-    123 Main Street, Delhi
-  </div>
-
-  {/* OPEN STATUS */}
-  <div className={`${b.isOpen ? "text-success" : "text-danger"} mb-2`}>
-    <i className="bi bi-check-circle-fill me-1"></i>
-    {b.isOpen ? "Open Now · Closes at 8:00 PM" : "Closed"}
-  </div>
-
-  {/* BOTTOM AREA */}
-<div className="d-flex align-items-center justify-content-between mt-auto">
-  {/* SERVICES */}
-  <div className="d-flex flex-wrap gap-2">
-    <span className="badge bg-light text-primary border">
-      General Consultation
-    </span>
-    <span className="badge bg-light text-dark border">₹500</span>
-    <span className="badge bg-light text-primary border">
-      Blood Tests
-    </span>
-    <span className="badge bg-light text-primary border">
-      Vaccinations
-    </span>
-  </div>
-
-  {/* CALL BUTTON */}
-  <button className="btn btn-light border d-flex align-items-center gap-2">
-    <i className="bi bi-telephone"></i>
-    Call
-  </button>
+  ))}
 </div>
-  </div>
-                    </div>
-                  ))}
-                </div>
+
               </div>
             );
-                    })}
-      </div>   {/* <-- close container */}
-    </React.Fragment>
+          })}
+
+    {/* ROWS */}
+    <footer className="container mt-5 py-4 border-top">
+      <div className="row align-items-center text-center text-md-start">
+        <div className="col-md-3 fw-bold text-primary">
+          GWT-QR
+        </div>
+
+        <div className="col-md-6 d-flex justify-content-center gap-4 text-muted small my-3 my-md-0">
+          <span>About GWT-QR</span>
+          <span>Contact</span>
+          <span>Privacy Policy</span>
+          <span>Terms</span>
+        </div>
+
+        <div className="col-md-3 d-flex justify-content-center justify-content-md-end gap-2">
+          <span>📘</span>
+          <span>🐦</span>
+          <span>🔗</span>
+        </div>
+      </div>
+
+      <div className="text-center text-muted small mt-3">
+        © 2024 GWT-QR
+      </div>
+    </footer>
+  </div>
+ {/* ================= LOGIN POPUP ================= */}
+{showLoginPopup && (
+  <div
+    className="modal fade show"
+    style={{ display: "block", background: "rgba(0,0,0,0.5)" }}
+  >
+    <div className="modal-dialog modal-dialog-centered navy-modal">
+      <div className="modal-content border-0 shadow-lg">
+        <div className="modal-header">
+          <h5 className="modal-title fw-bold">
+            {mode === "login" ? "Customer Login" : "Customer Signup"}
+          </h5>
+
+          <button
+            className="btn-close"
+            onClick={() => setShowLoginPopup(false)}
+          />
+        </div>
+
+        <div className="modal-body">
+          {error && (
+            <div className="text-danger small mb-2">{error}</div>
+          )}
+
+          <input
+            type="email"
+            className="form-control mb-2"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <input
+            type="password"
+            className="form-control mb-2"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          {/* SHOW ONLY IN SIGNUP */}
+         {mode === "signup" && (
+  <>
+    <input
+      type="password"
+      className="form-control mb-2"
+      placeholder="Confirm Password"
+      value={confirmPassword}
+      onChange={(e) => setConfirmPassword(e.target.value)}
+    />
+
+    <input
+      type="text"
+      className="form-control mb-2"
+      placeholder="Mobile"
+      value={mobile}
+      onChange={(e) => setMobile(e.target.value)}
+    />
+  </>
+)}
+
+
+
+          <button
+            className="btn navy-btn w-100"
+            onClick={
+              mode === "login"
+                ? handleCustomerLogin
+                : handleCustomerSignup
+            }
+          >
+            {mode === "login" ? "Login" : "Create Account"}
+          </button>
+
+          <div className="text-center mt-3">
+            {mode === "login" ? (
+              <small>
+                Don’t have an account?{" "}
+                <span
+                  className="text-primary"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    setError("");
+                    setMode("signup");
+                  }}
+                >
+                  Sign Up
+                </span>
+              </small>
+            ) : (
+              <small>
+                Already have an account?{" "}
+                <span
+                  className="text-primary"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    setError("");
+                    setMode("login");
+                  }}
+                >
+                  Login
+                </span>
+              </small>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+{/* ================= END LOGIN POPUP ================= */}
+
+      {/* ================= END LOGIN POPUP ================= */}
+
+           
+</React.Fragment>
   );
-}
+};
+
+

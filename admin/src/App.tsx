@@ -17,7 +17,7 @@ import AddCategory from "../../Frontend-page-2/frontend/src/pages/AddCategory";
 import AddSubCategory from "../../Frontend-page-2/frontend/src/pages/AddSubCategory";
 import AddBusiness from "../../Frontend-page-2/frontend/src/pages/AddBusiness";
 import HealthcareDirectory from "./components/HealthcareDirectory";
-
+import HospitalDetails from "./components/HospitalDetails";
 <Route path="/healthcare-directory" element={<HealthcareDirectory />} />
 
 // Customer
@@ -44,6 +44,8 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/healthcare-directory" element={<HealthcareDirectory />} />
+      <Route path="/hospital/:id" element={<HospitalDetails />} />
+
 
       {/* ADMIN DASHBOARD */}
       <Route
